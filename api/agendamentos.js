@@ -1,5 +1,4 @@
 import { getPool } from './_db.js';
-import { validarToken, getSessionFromRequest } from './_auth.js';
 
 export default async function handler(req, res) {
   const pool = getPool();
@@ -49,12 +48,8 @@ export default async function handler(req, res) {
     }
   }
 
+  // POST é público — o cliente agenda pelo site e o barbeiro pelo painel
   if (req.method === 'POST') {
-    const token = getSessionFromRequest(req);
-    if (!validarToken(token)) {
-      return res.status(401).json({ erro: 'Não autenticado' });
-    }
-
     try {
       const { clienteNome, telefone, servico, preco, barbeiro, horario, data } = req.body;
 
