@@ -1,6 +1,5 @@
 const API_BASE = '/api';
 
-// Retorna 'YYYY-MM-DD' da data local
 export function dataLocalISO(d = new Date()) {
   const ano = d.getFullYear();
   const mes = String(d.getMonth() + 1).padStart(2, '0');
@@ -28,7 +27,7 @@ export async function criarAgendamento(dados) {
 }
 
 export async function atualizarAgendamento(id, dados) {
-  const res = await fetch(`${API_BASE}/agendamentos/${id}`, {
+  const res = await fetch(`${API_BASE}/por-id/${id}`, {   // <-- MUDOU AQUI
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados),
@@ -38,7 +37,7 @@ export async function atualizarAgendamento(id, dados) {
 }
 
 export async function apagarAgendamento(id) {
-  const res = await fetch(`${API_BASE}/agendamentos/${id}`, {
+  const res = await fetch(`${API_BASE}/por-id/${id}`, {   // <-- MUDOU AQUI
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Erro ao apagar agendamento');
