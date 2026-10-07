@@ -5,6 +5,9 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
+      const { data } = req.query;
+      const dataConsulta = data || null;
+
       const [rows] = await pool.execute(
         `SELECT 
            id,
@@ -19,14 +22,19 @@ export default async function handler(req, res) {
            pagamento,
            consumo
          FROM agendamentos
-         WHERE data = CURDATE()
-         ORDER BY horario ASC`
+         WHERE data = COALESCE(?, CURDATE())
+         ORDER BY horario ASC`,
+        [dataConsulta]
       );
 
       const formatado = rows.map((r) => ({
         ...r,
         preco: Number(r.preco),
-        consumo: r.consumo ? (typeof r.consumo === 'string' ? JSON.parse(r.consumo) : r.consumo) : [],
+        consumo: r.consumo
+          ? typeof r.consumo === 'string'
+            ? JSON.parse(r.consumo)
+            : r.consumo
+          : [],
       }));
 
       return res.status(200).json(formatado);

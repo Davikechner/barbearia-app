@@ -1,7 +1,18 @@
 const API_BASE = '/api';
 
-export async function listarAgendamentos() {
-  const res = await fetch(`${API_BASE}/agendamentos`);
+// Retorna 'YYYY-MM-DD' da data local
+export function dataLocalISO(d = new Date()) {
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+export async function listarAgendamentos(data) {
+  const url = data
+    ? `${API_BASE}/agendamentos?data=${data}`
+    : `${API_BASE}/agendamentos`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Erro ao listar agendamentos');
   return res.json();
 }

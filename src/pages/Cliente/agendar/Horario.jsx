@@ -23,6 +23,14 @@ function paraMinutos(hhmm) {
   return h * 60 + m;
 }
 
+// Retorna a data local (fuso do usuário) como 'YYYY-MM-DD'
+function dataLocalISO(d = new Date()) {
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
 function Horario() {
   const navigate = useNavigate();
   const { agendamento, atualizar } = useAgendamento();
@@ -60,7 +68,6 @@ function Horario() {
         setErro(null);
         const resp = await listarHorariosOcupados(agendamento.barbeiro, data);
         if (!cancelado) {
-          // A API retorna ["15:00:00", ...] — normaliza pra "15:00"
           const set = new Set(
             (resp.ocupados || []).map((h) => h.slice(0, 5))
           );
@@ -80,15 +87,16 @@ function Horario() {
     };
   }, [data, agendamento.barbeiro]);
 
-  // Se por algum motivo entrar sem serviço ou barbeiro, volta
   if (!agendamento.servico || !agendamento.barbeiro) {
     navigate('/agendar/servico');
     return null;
   }
 
-  // Horários já passados do dia de hoje
+  // Data de "hoje" no fuso LOCAL (Brasil)
+  const hoje = dataLocalISO();
+
+  // Horários que já passaram — só faz sentido se a data escolhida for HOJE
   const horariosPassados = useMemo(() => {
-    const hoje = new Date().toISOString().split('T')[0];
     const passados = new Set();
     if (data === hoje) {
       HORARIOS.forEach((h) => {
@@ -96,15 +104,13 @@ function Horario() {
       });
     }
     return passados;
-  }, [data, agoraMinutos]);
+  }, [data, hoje, agoraMinutos]);
 
   const continuar = () => {
     if (!data || !horario) return;
     atualizar({ data, horario });
     navigate('/agendar/confirmar');
   };
-
-  const hoje = new Date().toISOString().split('T')[0];
 
   return (
     <div className="bg-zinc-950 text-zinc-100 antialiased flex justify-center min-h-screen">
