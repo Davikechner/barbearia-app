@@ -3,10 +3,7 @@ import {
   UserPlus,
   X,
   User,
-  Sparkles,
-  Flame,
-  Eye,
-  Scissors,
+  Scissors as ScissorsLucide,
   Clock,
   Check,
   Phone,
@@ -17,16 +14,27 @@ import {
   History,
   Loader2,
 } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faScissors,
+  faUserLarge,
+  faFire,
+  faEye,
+  faWandMagicSparkles,
+  faLightbulb,
+} from '@fortawesome/free-solid-svg-icons';
 import { useBarbeiro } from '../../context/BarbeiroContext';
 import { listarHorariosOcupados } from '../../api';
 import SeletorData from '../Cliente/SeletorData';
 
 const SERVICOS = [
-  { id: 'degrade', nome: 'Corte Degradê', preco: 45, Icone: Scissors, desc: 'Máquina + tesoura' },
-  { id: 'barba', nome: 'Barba Terapia', preco: 35, Icone: Sparkles, desc: 'Toalha quente e navalha' },
-  { id: 'combo', nome: 'Corte + Barba', preco: 70, Icone: Flame, desc: 'Combo completo' },
-  { id: 'sobrancelha', nome: 'Sobrancelha', preco: 20, Icone: Eye, desc: 'Alinhamento perfeito' },
-  { id: 'pezinho', nome: 'Pezinho / Acabamento', preco: 25, Icone: Scissors, desc: 'Manutenção rápida' },
+  { id: 'degrade', nome: 'Corte Degradê', preco: 45, Icone: faScissors, desc: 'Máquina + tesoura' },
+  { id: 'barba', nome: 'Barba Terapia', preco: 35, Icone: faUserLarge, desc: 'Toalha quente e navalha' },
+  { id: 'combo', nome: 'Corte + Barba', preco: 70, Icone: faFire, desc: 'Combo completo' },
+  { id: 'sobrancelha', nome: 'Sobrancelha', preco: 20, Icone: faEye, desc: 'Alinhamento perfeito' },
+  { id: 'pezinho', nome: 'Pezinho / Acabamento', preco: 25, Icone: faScissors, desc: 'Manutenção rápida' },
+  { id: 'platinado', nome: 'Platinado / Nevou', preco: 180, Icone: faWandMagicSparkles, desc: 'Descoloração completa' },
+  { id: 'luzes', nome: 'Luzes', preco: 150, Icone: faLightbulb, desc: 'Mechas iluminadas' },
 ];
 
 const BARBEIROS = [
@@ -92,7 +100,6 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
     return d.getHours() * 60 + d.getMinutes();
   });
 
-  // Reset ao abrir
   useEffect(() => {
     if (aberto) {
       setEtapa(1);
@@ -108,7 +115,6 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto, barbeiroLogado, dataInicial]);
 
-  // Atualiza relógio
   useEffect(() => {
     if (!aberto) return;
     const t = setInterval(() => {
@@ -118,11 +124,9 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
     return () => clearInterval(t);
   }, [aberto]);
 
-  // Busca horários ocupados quando muda barbeiro ou data
   useEffect(() => {
     if (!aberto || !barbeiro || !data) return;
     let cancelado = false;
-
     const buscar = async () => {
       try {
         setCarregandoHorarios(true);
@@ -137,14 +141,12 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
         if (!cancelado) setCarregandoHorarios(false);
       }
     };
-
     buscar();
     return () => {
       cancelado = true;
     };
   }, [aberto, barbeiro, data]);
 
-  // Limpa horário se ficar inválido
   useEffect(() => {
     if (!horario) return;
     const ehHoje = data === hojeISO;
@@ -204,11 +206,12 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
     return `${d}/${m}/${a}`;
   };
 
-  const rotuloData = data === hojeISO
-    ? 'Hoje'
-    : data === dataLocalISO(new Date(Date.now() + 86400000))
-    ? 'Amanhã'
-    : formatarDataBR(data);
+  const rotuloData =
+    data === hojeISO
+      ? 'Hoje'
+      : data === dataLocalISO(new Date(Date.now() + 86400000))
+      ? 'Amanhã'
+      : formatarDataBR(data);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
@@ -236,7 +239,7 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
           </button>
         </div>
 
-        {/* Barra de progresso */}
+        {/* Barrinhas de progresso */}
         <div className="px-5 pt-4 shrink-0">
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((n) => (
@@ -256,7 +259,7 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
           {etapa === 1 && (
             <div>
               <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">
-                <Scissors className="w-3.5 h-3.5 text-yellow-500" />
+                <ScissorsLucide className="w-3.5 h-3.5 text-yellow-500" />
                 Qual serviço?
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -280,7 +283,7 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
                             : 'bg-zinc-800 text-yellow-400'
                         }`}
                       >
-                        <s.Icone className="w-5 h-5" />
+                        <FontAwesomeIcon icon={s.Icone} className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-zinc-100 leading-tight">
@@ -357,7 +360,7 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
             </div>
           )}
 
-          {/* ETAPA 3: Data + Horário */}
+          {/* ETAPA 3: Data + Hora */}
           {etapa === 3 && (
             <div className="space-y-5">
               <div>
@@ -365,10 +368,13 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
                   <CalendarIcon className="w-3.5 h-3.5 text-yellow-500" />
                   Escolha a data
                 </label>
-                <SeletorData valor={data} onChange={(novaData) => {
-                  setData(novaData);
-                  setHorario('');
-                }} />
+                <SeletorData
+                  valor={data}
+                  onChange={(novaData) => {
+                    setData(novaData);
+                    setHorario('');
+                  }}
+                />
               </div>
 
               <div>
@@ -490,7 +496,7 @@ function ModalNovoAgendamento({ aberto, onFechar, onSalvar, agendamentos = [], d
                 <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-zinc-500">
-                      <Scissors className="w-3.5 h-3.5 text-yellow-500" />
+                      <ScissorsLucide className="w-3.5 h-3.5 text-yellow-500" />
                       <span>Serviço</span>
                     </div>
                     <span className="text-sm font-semibold text-zinc-100">
