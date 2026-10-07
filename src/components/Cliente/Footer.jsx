@@ -1,4 +1,4 @@
-import { Scissors, MapPin, Clock, Phone, Instagram } from 'lucide-react';
+import { Scissors, MapPin, Clock, Phone, AtSign } from 'lucide-react';
 
 function Footer() {
   return (
@@ -71,7 +71,7 @@ function Footer() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-yellow-400 transition-colors"
             >
-              <Instagram className="w-3.5 h-3.5" />
+              <AtSign className="w-3.5 h-3.5" />
               @guibarbeiro
             </a>
           </div>
