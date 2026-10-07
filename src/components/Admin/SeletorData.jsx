@@ -1,171 +1,151 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  X,
+} from 'lucide-react';
+import SeletorDataVisual from '../Cliente/SeletorData';
 
-const DIAS_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-const MESES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
-
-function isoDataLocal(ano, mes, dia) {
-  const m = String(mes + 1).padStart(2, '0');
-  const d = String(dia).padStart(2, '0');
-  return `${ano}-${m}-${d}`;
+function somarDias(iso, dias) {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const d = new Date(ano, mes - 1, dia);
+  d.setDate(d.getDate() + dias);
+  const a = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${a}-${m}-${dd}`;
 }
 
-function hojeISO() {
-  const h = new Date();
-  return isoDataLocal(h.getFullYear(), h.getMonth(), h.getDate());
+function rotuloData(dataISO, hojeISO) {
+  if (dataISO === hojeISO) return 'Hoje';
+  if (dataISO === somarDias(hojeISO, -1)) return 'Ontem';
+  if (dataISO === somarDias(hojeISO, 1)) return 'Amanhã';
+  const [ano, mes, dia] = dataISO.split('-');
+  return `${dia}/${mes}/${ano}`;
 }
 
-function SeletorData({ valor, onChange }) {
-  const hoje = new Date();
-  const hojeStr = hojeISO();
+function SeletorData({ dataSelecionada, hojeISO, onChange }) {
+  const [popoverAberto, setPopoverAberto] = useState(false);
+  const ref = useRef(null);
 
-  const dataInicial = valor
-    ? new Date(valor + 'T12:00:00')
-    : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const [mesVisivel, setMesVisivel] = useState(dataInicial.getMonth());
-  const [anoVisivel, setAnoVisivel] = useState(dataInicial.getFullYear());
+  const ontem = somarDias(hojeISO, -1);
+  const amanha = somarDias(hojeISO, 1);
 
-  const primeiroDiaSemana = new Date(anoVisivel, mesVisivel, 1).getDay();
-  const diasNoMes = new Date(anoVisivel, mesVisivel + 1, 0).getDate();
+  const atalhos = [
+    { label: 'Ontem', data: ontem },
+    { label: 'Hoje', data: hojeISO },
+    { label: 'Amanhã', data: amanha },
+  ];
 
-  const podeVoltar = (() => {
-    const mesAtual = new Date(anoVisivel, mesVisivel, 1);
-    const mesHoje = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    return mesAtual > mesHoje;
-  })();
+  useEffect(() => {
+    if (!popoverAberto) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setPopoverAberto(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [popoverAberto]);
 
-  const irMesAnterior = () => {
-    if (!podeVoltar) return;
-    if (mesVisivel === 0) {
-      setMesVisivel(11);
-      setAnoVisivel(anoVisivel - 1);
-    } else {
-      setMesVisivel(mesVisivel - 1);
-    }
+  useEffect(() => {
+    if (!popoverAberto) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') setPopoverAberto(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [popoverAberto]);
+
+  const escolherDataVisual = (novaData) => {
+    if (!novaData) return;
+    onChange(novaData);
+    setPopoverAberto(false);
   };
-
-  const irProximoMes = () => {
-    if (mesVisivel === 11) {
-      setMesVisivel(0);
-      setAnoVisivel(anoVisivel + 1);
-    } else {
-      setMesVisivel(mesVisivel + 1);
-    }
-  };
-
-  const escolherDia = (dia) => {
-    onChange(isoDataLocal(anoVisivel, mesVisivel, dia));
-  };
-
-  const celulas = [];
-  for (let i = 0; i < primeiroDiaSemana; i++) celulas.push(null);
-  for (let d = 1; d <= diasNoMes; d++) celulas.push(d);
 
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3">
-      {/* Cabeçalho do mês */}
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 shrink-0">
+          <CalendarIcon className="w-4 h-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            Visualizando
+          </p>
+          <p className="text-sm font-bold text-white truncate">
+            {rotuloData(dataSelecionada, hojeISO)}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
         <button
-          type="button"
-          onClick={irMesAnterior}
-          disabled={!podeVoltar}
-          className={`p-1 rounded-md transition-all ${
-            podeVoltar
-              ? 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-              : 'text-zinc-700 cursor-not-allowed'
-          }`}
+          onClick={() => onChange(somarDias(dataSelecionada, -1))}
+          className="p-2 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all"
+          title="Dia anterior"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <div className="text-xs font-bold text-white">
-          {MESES[mesVisivel]}{' '}
-          <span className="text-zinc-500 font-medium">{anoVisivel}</span>
+
+        <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-xl p-1">
+          {atalhos.map((a) => (
+            <button
+              key={a.label}
+              onClick={() => onChange(a.data)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                dataSelecionada === a.data
+                  ? 'bg-yellow-500 text-zinc-950 shadow'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
         </div>
+
         <button
-          type="button"
-          onClick={irProximoMes}
-          className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all"
+          onClick={() => onChange(somarDias(dataSelecionada, 1))}
+          className="p-2 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all"
+          title="Próximo dia"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
-      </div>
 
-      {/* Dias da semana */}
-      <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {DIAS_SEMANA.map((d, i) => (
-          <div
-            key={i}
-            className="text-center text-[9px] font-bold text-zinc-600 py-0.5"
-          >
-            {d}
-          </div>
-        ))}
-      </div>
-
-      {/* Grid de dias */}
-      <div className="grid grid-cols-7 gap-0.5">
-        {celulas.map((dia, i) => {
-          if (dia === null) {
-            return <div key={`vazio-${i}`} className="h-7" />;
-          }
-
-          const isoDia = isoDataLocal(anoVisivel, mesVisivel, dia);
-          const ehHoje = isoDia === hojeStr;
-          const ehPassado = isoDia < hojeStr;
-          const ehDomingo = new Date(anoVisivel, mesVisivel, dia).getDay() === 0;
-          const bloqueado = ehPassado || ehDomingo;
-          const selecionado = valor === isoDia;
-
-          return (
-            <button
-              key={isoDia}
-              type="button"
-              disabled={bloqueado}
-              onClick={() => escolherDia(dia)}
-              title={ehDomingo ? 'Fechado aos domingos' : undefined}
-              className={`h-7 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center relative ${
-                bloqueado
-                  ? 'text-zinc-700 cursor-not-allowed line-through decoration-zinc-800'
-                  : selecionado
-                  ? 'bg-yellow-500 text-zinc-950 shadow-sm shadow-yellow-500/30'
-                  : 'text-zinc-200 hover:bg-zinc-800 hover:text-white'
-              }`}
-            >
-              {dia}
-              {ehHoje && !selecionado && (
-                <span className="absolute bottom-0.5 w-0.5 h-0.5 rounded-full bg-yellow-500" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Rodapé com atalhos */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/70">
-        <button
-          type="button"
-          onClick={() => {
-            const h = new Date();
-            setMesVisivel(h.getMonth());
-            setAnoVisivel(h.getFullYear());
-            onChange(hojeStr);
-          }}
-          className="text-[10px] text-yellow-400 hover:text-yellow-300 font-semibold"
-        >
-          Hoje
-        </button>
-        {valor && (
+        <div className="relative" ref={ref}>
           <button
-            type="button"
-            onClick={() => onChange('')}
-            className="text-[10px] text-zinc-500 hover:text-zinc-300"
+            onClick={() => setPopoverAberto((v) => !v)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${
+              popoverAberto
+                ? 'bg-yellow-500 text-zinc-950 border-yellow-500'
+                : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-yellow-500/50 hover:text-white'
+            }`}
+            title="Escolher data específica"
           >
-            Limpar
+            <CalendarIcon className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Escolher data</span>
           </button>
-        )}
+
+          {popoverAberto && (
+            <div className="absolute right-0 mt-2 z-50 w-72 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="relative">
+                <button
+                  onClick={() => setPopoverAberto(false)}
+                  className="absolute -top-2 -right-2 z-10 w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 flex items-center justify-center shadow-lg transition-colors"
+                  title="Fechar"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <SeletorDataVisual
+                  valor={dataSelecionada}
+                  onChange={escolherDataVisual}
+                  modo="navegar"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
