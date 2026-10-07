@@ -338,6 +338,7 @@ function Painel() {
         onFechar={() => setModalNovoAberto(false)}
         onSalvar={salvarNovo}
         agendamentos={agendamentos}
+        dataInicial={dataSelecionada}
       />
 
       <ModalPagamento

@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft,
-  Calendar as CalendarIcon,
   Clock,
   AlertCircle,
   Loader2,
@@ -11,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAgendamento } from '../../../context/AgendamentoContext';
 import { listarHorariosOcupados } from '../../../api';
+import SeletorData from '../../../components/Cliente/SeletorData';
 
 const HORARIOS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -23,7 +23,6 @@ function paraMinutos(hhmm) {
   return h * 60 + m;
 }
 
-// Retorna a data local (fuso do usuário) como 'YYYY-MM-DD'
 function dataLocalISO(d = new Date()) {
   const ano = d.getFullYear();
   const mes = String(d.getMonth() + 1).padStart(2, '0');
@@ -45,7 +44,6 @@ function Horario() {
     return d.getHours() * 60 + d.getMinutes();
   });
 
-  // Atualiza a hora atual a cada 30s
   useEffect(() => {
     const t = setInterval(() => {
       const d = new Date();
@@ -54,7 +52,6 @@ function Horario() {
     return () => clearInterval(t);
   }, []);
 
-  // Busca horários ocupados quando tem data + barbeiro
   useEffect(() => {
     if (!data || !agendamento.barbeiro) {
       setOcupados(new Set());
@@ -68,14 +65,12 @@ function Horario() {
         setErro(null);
         const resp = await listarHorariosOcupados(agendamento.barbeiro, data);
         if (!cancelado) {
-          const set = new Set(
-            (resp.ocupados || []).map((h) => h.slice(0, 5))
-          );
+          const set = new Set((resp.ocupados || []).map((h) => h.slice(0, 5)));
           setOcupados(set);
         }
       } catch (e) {
         console.error(e);
-        if (!cancelado) setErro('Não foi possível buscar os horários. Tente de novo.');
+        if (!cancelado) setErro('Não foi possível buscar os horários.');
       } finally {
         if (!cancelado) setCarregando(false);
       }
@@ -92,10 +87,8 @@ function Horario() {
     return null;
   }
 
-  // Data de "hoje" no fuso LOCAL (Brasil)
   const hoje = dataLocalISO();
 
-  // Horários que já passaram — só faz sentido se a data escolhida for HOJE
   const horariosPassados = useMemo(() => {
     const passados = new Set();
     if (data === hoje) {
@@ -141,20 +134,13 @@ function Horario() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-zinc-300 mb-2 flex items-center gap-2">
-              <CalendarIcon className="w-3.5 h-3.5 text-yellow-500" />
+            <label className="text-xs font-semibold text-zinc-300 mb-3 block">
               Selecione a Data
             </label>
-            <input
-              type="date"
-              value={data}
-              min={hoje}
-              onChange={(e) => {
-                setData(e.target.value);
-                setHorario('');
-              }}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-500 [color-scheme:dark]"
-            />
+            <SeletorData valor={data} onChange={(novaData) => {
+              setData(novaData);
+              setHorario('');
+            }} />
           </div>
 
           <div>
