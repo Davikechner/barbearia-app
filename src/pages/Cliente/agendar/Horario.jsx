@@ -1,7 +1,16 @@
-import { useState, useMemo } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, AlertCircle } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  Clock,
+  AlertCircle,
+  Loader2,
+  Lock,
+  History,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAgendamento } from '../../../context/AgendamentoContext';
+import { listarHorariosOcupados } from '../../../api';
 
 const HORARIOS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -9,34 +18,93 @@ const HORARIOS = [
   '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
 ];
 
-// FAKE — depois vira API. Formato: { barbeiro: ['HH:MM', ...] }
-const OCUPADOS_FAKE = {
-  Kauan: ['09:00', '11:30', '14:00', '16:30'],
-  Guilherme: ['10:00', '13:30', '15:00', '17:30'],
-};
+function paraMinutos(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
 
 function Horario() {
   const navigate = useNavigate();
   const { agendamento, atualizar } = useAgendamento();
   const [data, setData] = useState(agendamento.data || '');
   const [horario, setHorario] = useState(agendamento.horario || '');
+  const [ocupados, setOcupados] = useState(new Set());
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState(null);
 
+  const [agoraMinutos, setAgoraMinutos] = useState(() => {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  });
+
+  // Atualiza a hora atual a cada 30s
+  useEffect(() => {
+    const t = setInterval(() => {
+      const d = new Date();
+      setAgoraMinutos(d.getHours() * 60 + d.getMinutes());
+    }, 30 * 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Busca horários ocupados quando tem data + barbeiro
+  useEffect(() => {
+    if (!data || !agendamento.barbeiro) {
+      setOcupados(new Set());
+      return;
+    }
+
+    let cancelado = false;
+    const buscar = async () => {
+      try {
+        setCarregando(true);
+        setErro(null);
+        const resp = await listarHorariosOcupados(agendamento.barbeiro, data);
+        if (!cancelado) {
+          // A API retorna ["15:00:00", ...] — normaliza pra "15:00"
+          const set = new Set(
+            (resp.ocupados || []).map((h) => h.slice(0, 5))
+          );
+          setOcupados(set);
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancelado) setErro('Não foi possível buscar os horários. Tente de novo.');
+      } finally {
+        if (!cancelado) setCarregando(false);
+      }
+    };
+
+    buscar();
+    return () => {
+      cancelado = true;
+    };
+  }, [data, agendamento.barbeiro]);
+
+  // Se por algum motivo entrar sem serviço ou barbeiro, volta
   if (!agendamento.servico || !agendamento.barbeiro) {
     navigate('/agendar/servico');
     return null;
   }
 
-  const hoje = new Date().toISOString().split('T')[0];
-
-  const ocupados = useMemo(() => {
-    return new Set(OCUPADOS_FAKE[agendamento.barbeiro] || []);
-  }, [agendamento.barbeiro]);
+  // Horários já passados do dia de hoje
+  const horariosPassados = useMemo(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const passados = new Set();
+    if (data === hoje) {
+      HORARIOS.forEach((h) => {
+        if (paraMinutos(h) < agoraMinutos) passados.add(h);
+      });
+    }
+    return passados;
+  }, [data, agoraMinutos]);
 
   const continuar = () => {
     if (!data || !horario) return;
     atualizar({ data, horario });
     navigate('/agendar/confirmar');
   };
+
+  const hoje = new Date().toISOString().split('T')[0];
 
   return (
     <div className="bg-zinc-950 text-zinc-100 antialiased flex justify-center min-h-screen">
@@ -50,26 +118,19 @@ function Horario() {
           </button>
           <div>
             <h1 className="font-bold text-sm text-white">Novo Agendamento</h1>
-            <p className="text-[11px] text-zinc-400">
-              Passo 3 de 4: Data e horário
-            </p>
+            <p className="text-[11px] text-zinc-400">Passo 3 de 4: Data e horário</p>
           </div>
         </header>
 
         <main className="flex-1 p-6 space-y-5 overflow-y-auto">
-          {/* Resumo pequeno do que foi escolhido */}
           <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3 space-y-1.5">
             <div className="flex justify-between text-[11px]">
               <span className="text-zinc-500">Serviço</span>
-              <span className="text-zinc-200 font-medium">
-                {agendamento.servico.nome}
-              </span>
+              <span className="text-zinc-200 font-medium">{agendamento.servico.nome}</span>
             </div>
             <div className="flex justify-between text-[11px]">
               <span className="text-zinc-500">Barbeiro</span>
-              <span className="text-zinc-200 font-medium">
-                {agendamento.barbeiro}
-              </span>
+              <span className="text-zinc-200 font-medium">{agendamento.barbeiro}</span>
             </div>
           </div>
 
@@ -96,9 +157,11 @@ function Horario() {
                 <Clock className="w-3.5 h-3.5 text-yellow-500" />
                 Horários Disponíveis
               </label>
-              <span className="text-[10px] text-zinc-500">
-                {ocupados.size > 0 ? `${ocupados.size} ocupados` : 'Todos livres'}
-              </span>
+              {data && !carregando && (
+                <span className="text-[10px] text-zinc-500">
+                  {ocupados.size > 0 ? `${ocupados.size} ocupados` : 'Todos livres'}
+                </span>
+              )}
             </div>
 
             {!data && (
@@ -110,26 +173,53 @@ function Horario() {
               </div>
             )}
 
-            {data && (
+            {data && carregando && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-yellow-500" />
+              </div>
+            )}
+
+            {data && erro && (
+              <div className="flex items-start gap-2 bg-red-950/30 border border-red-900/40 rounded-xl p-3">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-300">{erro}</p>
+              </div>
+            )}
+
+            {data && !carregando && !erro && (
               <div className="grid grid-cols-4 gap-2">
                 {HORARIOS.map((h) => {
                   const bloqueado = ocupados.has(h);
+                  const passou = horariosPassados.has(h);
+                  const indisponivel = bloqueado || passou;
                   const selecionado = horario === h;
+
+                  let tooltip = `Agendar às ${h}`;
+                  if (bloqueado) tooltip = 'Horário já reservado';
+                  else if (passou) tooltip = 'Horário já passou';
+
                   return (
                     <button
                       key={h}
                       type="button"
-                      disabled={bloqueado}
+                      disabled={indisponivel}
                       onClick={() => setHorario(h)}
-                      className={`py-2.5 text-xs font-semibold rounded-xl border transition-all ${
-                        bloqueado
-                          ? 'bg-zinc-950/40 border-zinc-900 text-zinc-700 line-through cursor-not-allowed'
+                      title={tooltip}
+                      className={`relative py-2.5 text-xs font-semibold rounded-xl border transition-all flex flex-col items-center justify-center gap-0.5 ${
+                        indisponivel
+                          ? 'bg-zinc-950/60 border-zinc-800/60 text-zinc-600 cursor-not-allowed'
                           : selecionado
                           ? 'bg-yellow-500 text-zinc-950 border-yellow-500 shadow-md shadow-yellow-500/20'
                           : 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:border-yellow-500'
                       }`}
                     >
-                      {h}
+                      {bloqueado && <Lock className="w-2.5 h-2.5 text-zinc-600" />}
+                      {passou && !bloqueado && (
+                        <History className="w-2.5 h-2.5 text-zinc-600" />
+                      )}
+                      <span className={indisponivel ? 'line-through decoration-zinc-600' : ''}>
+                        {h}
+                      </span>
                     </button>
                   );
                 })}

@@ -38,17 +38,19 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const { clienteNome, telefone, servico, preco, barbeiro, horario } = req.body;
+      const { clienteNome, telefone, servico, preco, barbeiro, horario, data } = req.body;
 
       if (!clienteNome || !servico || !barbeiro || !horario) {
         return res.status(400).json({ erro: 'Campos obrigatórios faltando' });
       }
 
+      const dataFinal = data || null;
+
       const [result] = await pool.execute(
         `INSERT INTO agendamentos 
            (cliente_nome, telefone, servico, preco, barbeiro, horario, data, status)
-         VALUES (?, ?, ?, ?, ?, ?, CURDATE(), 'pending')`,
-        [clienteNome, telefone || null, servico, preco, barbeiro, horario]
+         VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, CURDATE()), 'pending')`,
+        [clienteNome, telefone || null, servico, preco, barbeiro, horario, dataFinal]
       );
 
       return res.status(201).json({
