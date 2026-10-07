@@ -7,6 +7,31 @@ export function dataLocalISO(d = new Date()) {
   return `${ano}-${mes}-${dia}`;
 }
 
+export async function fazerLogin(senha) {
+  const res = await fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ senha }),
+  });
+  const dados = await res.json();
+  if (!res.ok) throw new Error(dados.erro || 'Erro ao fazer login');
+  return dados;
+}
+
+export async function fazerLogout() {
+  await fetch(`${API_BASE}/logout`, { method: 'POST' });
+}
+
+export async function verificarSessao() {
+  try {
+    const res = await fetch(`${API_BASE}/verificar-sessao`);
+    if (!res.ok) return { autenticado: false };
+    return res.json();
+  } catch {
+    return { autenticado: false };
+  }
+}
+
 export async function listarAgendamentos(data) {
   const url = data
     ? `${API_BASE}/agendamentos?data=${data}`
@@ -27,7 +52,7 @@ export async function criarAgendamento(dados) {
 }
 
 export async function atualizarAgendamento(id, dados) {
-  const res = await fetch(`${API_BASE}/por-id/${id}`, {   // <-- MUDOU AQUI
+  const res = await fetch(`${API_BASE}/por-id/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados),
@@ -37,7 +62,7 @@ export async function atualizarAgendamento(id, dados) {
 }
 
 export async function apagarAgendamento(id) {
-  const res = await fetch(`${API_BASE}/por-id/${id}`, {   // <-- MUDOU AQUI
+  const res = await fetch(`${API_BASE}/por-id/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Erro ao apagar agendamento');

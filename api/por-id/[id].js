@@ -1,4 +1,5 @@
 import { getPool } from '../_db.js';
+import { validarToken, getSessionFromRequest } from '../_auth.js';
 
 export default async function handler(req, res) {
   const pool = getPool();
@@ -6,6 +7,11 @@ export default async function handler(req, res) {
 
   if (!id) {
     return res.status(400).json({ erro: 'ID obrigatório' });
+  }
+
+  const token = getSessionFromRequest(req);
+  if (!validarToken(token)) {
+    return res.status(401).json({ erro: 'Não autenticado' });
   }
 
   if (req.method === 'PUT') {
@@ -25,7 +31,6 @@ export default async function handler(req, res) {
 
       if (pagamento !== undefined) {
         campos.push('pagamento = ?');
-        // Se for null, string vazia ou undefined → NULL
         valores.push(pagamento || null);
       }
 
@@ -44,9 +49,6 @@ export default async function handler(req, res) {
       }
 
       valores.push(id);
-
-      console.log('UPDATE:', `UPDATE agendamentos SET ${campos.join(', ')} WHERE id = ?`, valores);
-
       await pool.execute(
         `UPDATE agendamentos SET ${campos.join(', ')} WHERE id = ?`,
         valores
@@ -55,7 +57,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error('Erro ao atualizar:', err);
-      return res.status(500).json({ erro: 'Erro ao atualizar', detalhes: String(err) });
+      return res.status(500).json({ erro: 'Erro ao atualizar' });
     }
   }
 
