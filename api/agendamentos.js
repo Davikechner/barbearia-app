@@ -30,6 +30,10 @@ export default async function handler(req, res) {
       const formatado = rows.map((r) => ({
         ...r,
         preco: Number(r.preco),
+        horario: r.horario ? String(r.horario).slice(0, 5) : '',
+        data: r.data instanceof Date
+          ? r.data.toISOString().split('T')[0]
+          : String(r.data).split('T')[0],
         consumo: r.consumo
           ? typeof r.consumo === 'string'
             ? JSON.parse(r.consumo)
@@ -68,7 +72,7 @@ export default async function handler(req, res) {
         servico,
         preco: Number(preco),
         barbeiro,
-        horario,
+        horario: String(horario).slice(0, 5),
         status: 'pending',
         consumo: [],
       });
